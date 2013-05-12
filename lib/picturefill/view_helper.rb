@@ -37,7 +37,7 @@ module Picturefill
       media = args.first.to_s if args.first.kind_of?(String) || args.first.kind_of?(Fixnum)
 
       tag = options[:tag] || :div
-      ratio_opt = options.delete(:ratio)
+      ratio_opt = options.delete(:ratio).to_i
       media_opt = Picturefill::ViewHelper.extract media unless media.blank? 
 
       unless media_opt && media_opt =~ /min-device-pixel-ratio/
@@ -49,7 +49,7 @@ module Picturefill
         else
           auto_ratio_tag = ratio_opt[0] == 'x' unless ratio_opt.blank?
         end
-        ratio = Picturefill::ViewHelper.ratio_attrib(ratio_opt) unless ratio_opt.blank?
+        ratio = Picturefill::ViewHelper.ratio_attribute(ratio_opt) unless ratio_opt.blank?
         media_opt = [media_opt, ratio].compact.join(' and ')
       end
       
@@ -99,24 +99,16 @@ module Picturefill
         end
       end
 
-      def ratio_attrib ratio
-        ratio = ratio.to_s.delete('x')
-        minor = 0
-        case ratio.to_s
-        when /^\d/
-          major = ratio
-        when /^\d.\d/
-          major, minor = ratio.split '.'        
-        else
-          raise ArgumentError, "Invalid ratio: #{ratio}, must be a number, fx '2.5' or '2' (even 'x2' or 'x2.5')"
-        end
-        ratio_attribute major, minor
-      end      
-
-      protected
-
-      def ratio_attribute major, minor
-        "(min-device-pixel-ratio: #{major}.#{minor})"
+      def ratio_attribute ratio
+        dpi = 96 * ratio
+        out=<<-END
+        (-webkit-min-device-pixel-ratio: #{ratio}),
+        (min--moz-device-pixel-ratio: #{ratio}),
+        (min-device-pixel-ratio:  #{ratio}),
+        (min-resolution: #{dpi}dpi),
+        (min-resolution: #{ratio}dppx)
+        END
+        out.strip
       end
     end # class methods
   end
