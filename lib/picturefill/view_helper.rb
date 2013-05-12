@@ -19,7 +19,7 @@ module Picturefill
       picture_src src, media, options.merge(tag: :source)
     end
 
-    def picturefill options = {}, &block
+    def picturefill uploader, options = {}, &block
       opts = {}
       alt = options.delete :alt
       clazz = options.delete :class
@@ -27,8 +27,40 @@ module Picturefill
       opts.merge! "class" => clazz unless clazz.blank?
       opts.merge! :"data-picture" => true
 
-      content = block_given? ? capture(&block) : ''
-      content_tag :div, content, opts
+      if block_given?
+        content_tag :div, opts, &block
+      else
+        content_tag :div, opts, false do
+          content = ''
+          sizes = opts[:sizes] || Picturefill.options[:sizes]
+          sizes.map do |size, params|
+            if uploader.respond_to?(size)
+              content << uploader_picture_src( uploader.send(size), params )
+            end
+          end
+          content << picture_fallback( uploader.send(Picturefill.options[:fallback]), alt: alt )
+          content.html_safe
+        end
+      end
+    end
+
+    # simplified version uses a Carrierwave uploader object and our configured options
+    def uploader_picture_src uploader, options
+      return unless uploader.kind_of?(CarrierWave::Uploader::Base)
+
+      tag = options.delete(:tag) || :div
+      ratio_opt = options.delete(:ratio)
+      if (val = options.delete(:min_width))
+        media_opt = "(min-width: #{val}px)"
+      end
+
+      ratio = Picturefill::ViewHelper.ratio_attribute(ratio_opt) unless ratio_opt.blank?
+      media_opt = [media_opt, ratio].compact.join(' and ')
+
+      options.merge! :"data-media" => media_opt unless media_opt.blank?
+      options.merge! :"data-src" => uploader.url      
+
+      content_tag(tag, nil, options)
     end
 
     # UGLY AS HELL!!! Needs refactor :P
