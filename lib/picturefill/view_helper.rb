@@ -32,7 +32,7 @@ module Picturefill
       else
         content_tag :div, opts, false do
           content = ''
-          sizes = opts[:sizes] || Picturefill.options[:sizes]
+          sizes = options[:sizes] || Picturefill.options[:sizes]
           sizes.map do |size, params|
             if uploader.respond_to?(size)
               content << uploader_picture_src( uploader.send(size), params )
